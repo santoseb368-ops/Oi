@@ -23,17 +23,12 @@ function salvarResposta(r) {
 
 /* ---------- Variáveis ---------- */
 function perguntas() {
-  const lista = [];
-  for (let n = 1; n <= 5; n++) {
-    const texto = env('BLOCO_' + n + '_PERGUNTA', env('BLOCO_' + n, ''));
-    if (!texto) continue;
-    lista.push({
-      pergunta: texto,
-      dica: env('BLOCO_' + n + '_DICA', ''),
-      longo: env('BLOCO_' + n + '_TIPO', 'texto').toLowerCase() === 'longo',
-    });
-  }
-  return lista;
+  // Toda variável que começa com BLOCO vira uma pergunta (máximo 5), em ordem de nome
+  return Object.keys(process.env)
+    .filter(k => /^BLOCO/i.test(k) && String(process.env[k]).trim())
+    .sort((x, y) => x.localeCompare(y, 'pt', { numeric: true }))
+    .slice(0, 5)
+    .map(k => ({ pergunta: String(process.env[k]).trim() }));
 }
 
 /* ---------- Página do formulário ---------- */
@@ -49,9 +44,7 @@ function paginaForm() {
   const blocos = perguntas().map((b, i) => `
     <div class="block" data-p="${esc(b.pergunta)}">
       <label for="c${i}">${esc(b.pergunta)}</label>
-      ${b.longo
-        ? '<textarea id="c' + i + '" rows="3" placeholder="' + esc(b.dica) + '"></textarea>'
-        : '<input id="c' + i + '" type="text" placeholder="' + esc(b.dica) + '">'}
+      <textarea id="c${i}" rows="1"></textarea>
       <div class="msg-erro">${esc(ERRO)}</div>
     </div>`).join('');
 
@@ -74,7 +67,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',system-
 .block:focus-within{border-color:var(--brand);box-shadow:0 0 0 3px var(--soft)}
 .block label{display:block;font-weight:600;margin-bottom:10px}
 .block textarea,.block input{width:100%;font:inherit;color:var(--text);background:var(--input);border:1px solid var(--line);border-radius:8px;padding:12px 14px;outline:none}
-.block textarea{resize:vertical;min-height:96px}
+.block textarea{resize:none;overflow:hidden;min-height:48px}
 .block input::placeholder,.block textarea::placeholder{color:var(--muted)}
 .block textarea:focus,.block input:focus{border-color:var(--brand)}
 .block.erro{border-color:#dc2626}
@@ -102,7 +95,10 @@ button:hover{background:var(--brand-dark)}
 <script>
 var form = document.getElementById('form');
 form.querySelectorAll('input,textarea').forEach(function (t) {
-  t.addEventListener('input', function () { t.parentNode.classList.remove('erro'); });
+  t.addEventListener('input', function () {
+    t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px';
+    t.parentNode.classList.remove('erro');
+  });
 });
 form.addEventListener('submit', function (e) {
   e.preventDefault();
